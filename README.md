@@ -1,5 +1,6 @@
 [githubusername]: TusharTechs
 [typing svg]: https://readme-typing-svg.demolab.com?font=Raleway&weight=500&size=30&duration=4000&pause=&color=F7D300&center=true&vCenter=true&width=435&height=100&lines=Hi+There!+%F0%9F%91%8B;I'm+Tushar+Techs
+[visitors]: https://visitor-badge.laobi.icu/badge?page_id=TusharTechs.TusharTechs&left_color=black&right_color=yellow&left_text=Visitors%20😎&format=true
 [summary]: https://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=TusharTechs&theme=transparent
 [lang]: https://github-readme-stats.vercel.app/api/top-langs/?username=TusharTechs&layout=compact&theme=vision-friendly-dark&hide_border=true&border_radius=10
 [trophy]: https://github-profile-trophy.vercel.app/?username=TusharTechs&theme=transparent
