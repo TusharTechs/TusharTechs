@@ -8,6 +8,7 @@
 [skills]: https://skillicons.dev/icons?i=react,redux,express,nodejs,mongodb,js,html,css,materialui,bootstrap,tailwind,java,md&perline=6
 [technologies]: https://skillicons.dev/icons?i=vscode,netlify,vercel,vite,bash,eclipse,powershell,github,discord,linkedin,instagram,twitter&perline=6
 
+<div align="center">
 
 ## :trophy: About Me :trophy:
 
