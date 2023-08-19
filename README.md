@@ -10,6 +10,11 @@
 
 <div align="center">
 
+![Tushar's visitors][visitors]
+
+![Tushar's Typing SVG][typing svg]
+
+
 ## :trophy: About Me :trophy:
 
 #### Highly motivated Java Coder and Full Stack Developer with a passion for coding and problem-solving. Possessing practical experience and honed skills in web development through academic projects. A dedicated individual committed to delivering high-quality solutions and continuously enhancing expertise in Java and Full stack.
