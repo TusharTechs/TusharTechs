@@ -5,7 +5,7 @@
 [trophy]: https://github-profile-trophy.vercel.app/?username=TusharTechs&theme=transparent
 [streak]: https://streak-stats.demolab.com?user=TusharTechs&theme=transparent&border_radius=10&date_format=M%20j%5B%2C%20Y%5D&card_width=500
 [activity]: https://activity-graph.herokuapp.com/graph?username=TusharTechs&theme=transparent&radius=10&hide_border=true&area=true
-[skills]: https://skillicons.dev/icons?i=react,redux,express,nodejs,mongodb,js,html,css,materialui,bootstrap,tailwind,java,javascript,typescript,nginx,mysql,docker,arduino,md&perline=6
+[skills]: https://skillicons.dev/icons?i=react,redux,express,nodejs,mongodb,js,html,css,materialui,bootstrap,tailwind,java,javascript,typescript,nginx,mysql,docker,graphql,arduino,md&perline=7
 [technologies]: https://skillicons.dev/icons?i=vscode,netlify,vercel,vite,bash,eclipse,powershell,github,discord,linkedin,instagram,twitter&perline=6
 
 <div align="center">
