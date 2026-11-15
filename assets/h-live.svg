@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="70" viewBox="0 0 1000 70" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
-<defs><linearGradient id="gt" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="0.5" stop-color="#a78bfa"/><stop offset="1" stop-color="#f472b6"/><animate attributeName="x1" values="0;-1;0" dur="8s" repeatCount="indefinite"/><animate attributeName="x2" values="1;2;1" dur="8s" repeatCount="indefinite"/></linearGradient><filter id="glow" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-<text x="0" y="22" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" fill="#22d3ee" letter-spacing="2">02 // DEPLOYED, NOT DEMOED</text>
-<text x="0" y="58" font-size="32" font-weight="800" fill="url(#gt)">Live in Production</text>
-<rect x="347" y="45" width="653" height="1.5" fill="url(#gt)" opacity="0.5"/>
-</svg>

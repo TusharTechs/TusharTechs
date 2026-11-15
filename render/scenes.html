@@ -1,0 +1,312 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>render</title>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js",
+               "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<style>
+  html, body { margin: 0; background: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+         -webkit-font-smoothing: antialiased; color: #e2e8f0; }
+  #stage { position: relative; overflow: hidden; border-radius: 18px; background: #03040a; }
+  #stage.flat { border-radius: 0; background: transparent; }
+  canvas.bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .ov { position: absolute; inset: 0; }
+  .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+  .grad { background: linear-gradient(90deg, #67e8f9, #c4b5fd 45%, #f9a8d4); -webkit-background-clip: text;
+          background-clip: text; color: transparent; }
+  .grad2 { background: linear-gradient(90deg, #06b6d4, #8b5cf6 50%, #ec4899); -webkit-background-clip: text;
+           background-clip: text; color: transparent; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 13px;
+          font-weight: 600; letter-spacing: .1px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .glass { background: rgba(10, 14, 32, .42); border: 1px solid rgba(196, 181, 253, .22);
+           backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.35); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script type="module">
+import { THREE, makeRenderer, makeStarfield, makeNebula, makeEarth, makeSun, makePlanet, makeMedal, loadTex, makeAtmosphere } from './lib.js';
+const TAU = Math.PI * 2;
+const q = new URLSearchParams(location.search);
+const name = q.get('scene');
+const DPR = window.devicePixelRatio || 1;
+const stage = document.getElementById('stage');
+
+function setup(w, h) {
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  const c = document.createElement('canvas'); c.className = 'bg'; stage.appendChild(c);
+  return c;
+}
+function overlay(html) {
+  const d = document.createElement('div'); d.className = 'ov'; d.innerHTML = html; stage.appendChild(d); return d;
+}
+// Background-only scene: nebula + stars, reused by several panels.
+function spaceLayer(canvas, w, h, opts = {}) {
+  const r = makeRenderer(canvas, w, h, DPR);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(50, w / h, .1, 1000);
+  const neb = makeNebula(opts.a, opts.b, opts.c, opts.strength ?? .5, opts.seed ?? 1);
+  const stars = makeStarfield(opts.stars ?? 3500, 400, opts.seed ?? 7);
+  scene.add(neb, stars);
+  return { r, scene, cam, render(t) { neb.update(t, w / h); stars.update(t, DPR); r.render(scene, cam); } };
+}
+
+const SCENES = {};
+
+// ---------------------------------------------------------------- HERO
+SCENES.hero = async () => {
+  const W = 1000, H = 380;
+  const c = setup(W, H);
+  const r = makeRenderer(c, W, H, DPR);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(28, W / H, .01, 2000);
+  cam.position.set(0, 0, 3.05);
+  cam.lookAt(0.0, 0.62, 0);
+  const neb = makeNebula('#2a1458', '#0a3552', '#4a0f35', .5, 3);
+  const stars = makeStarfield(6000, 600, 11);
+  scene.add(neb, stars);
+  const earth = await makeEarth();
+  const ec = new THREE.Vector3(.55, -.42, 0);
+  earth.rotation.z = .41; earth.rotation.x = -.2;
+  earth.position.copy(ec);
+  scene.add(earth);
+  // Put the sun just behind the upper-right limb, as seen from the camera: a sunrise crescent.
+  const toE = ec.clone().sub(cam.position).normalize();
+  const side = new THREE.Vector3(-.2, 1, 0).sub(toE.clone().multiplyScalar(toE.dot(new THREE.Vector3(-.2, 1, 0)))).normalize();
+  const limbPt = ec.clone().add(side.clone().multiplyScalar(1.0));
+  const sunPos = cam.position.clone().add(limbPt.sub(cam.position).normalize().multiplyScalar(80));
+  const sunDir = sunPos.clone().sub(ec).normalize().add(side.clone().multiplyScalar(2.4)).normalize();
+  earth.sun.copy(sunDir);
+  const sun = makeSun(sunPos, 2.4);
+  scene.add(sun);
+  overlay(`
+    <div style="position:absolute;left:52px;top:58px;max-width:560px">
+      <div class="mono" style="font-size:14px;color:#67e8f9;opacity:.9;letter-spacing:.4px">// transmission from New Delhi, India</div>
+      <div class="grad" style="font-size:64px;font-weight:800;letter-spacing:-2px;line-height:1.08;margin-top:10px;
+           filter:drop-shadow(0 0 18px rgba(167,139,250,.45))">Tushar Agarwal</div>
+      <div style="font-size:21px;color:#dbe4ff;font-weight:500;margin-top:8px;text-shadow:0 2px 12px #000">
+        AI Engineer who ships agents you can actually verify</div>
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <span class="chip" style="color:#fde68a;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12)">5× Hackathon Winner</span>
+        <span class="chip" style="color:#a5f3fc;border:1px solid rgba(34,211,238,.5);background:rgba(34,211,238,.12)">50+ AI products shipped</span>
+        <span class="chip" style="color:#fbcfe8;border:1px solid rgba(244,114,182,.5);background:rgba(244,114,182,.12)">Builder @ GoKwik</span>
+      </div>
+      <div class="mono" style="font-size:15px;color:#94a3b8;margin-top:30px"><span style="color:#34d399">$</span>
+        ship --verifiable --live --today<span id="cur" style="color:#e2e8f0">▍</span></div>
+    </div>`);
+  const cur = document.getElementById('cur');
+  return { w: W, h: H, frames: 120, delay: 100, renderAt(t) {
+    neb.update(t, W / H); stars.update(t, DPR); earth.update(t); sun.update(t);
+    cur.style.opacity = (t * 10) % 1 < .5 ? 1 : 0;
+    r.render(scene, cam);
+  } };
+};
+
+// ---------------------------------------------------------------- FOOTER (Earthrise)
+SCENES.footer = async () => {
+  const W = 1000, H = 200;
+  const c = setup(W, H);
+  const r = makeRenderer(c, W, H, DPR);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(22, W / H, .01, 3000);
+  cam.position.set(0, .2, 6);
+  cam.lookAt(0, 0, 0);
+  const stars = makeStarfield(5000, 900, 21);
+  scene.add(makeNebula('#160c33', '#06263b', '#2a0a22', .25, 9), stars);
+  const moonTex = await loadTex('textures/moon_1024.jpg');
+  const sunDir = new THREE.Vector3(-1, .25, .35).normalize();
+  const moon = makePlanet({ type: 2, c1: '#2c2c2e', c2: '#9a9792', c3: '#e2ded6', atmo: '#000', seed: 2, freq: 45, atmoPower: 0 }, new THREE.Vector3(-.65, .62, .35).normalize());
+  moon.scale.setScalar(30);
+  moon.position.set(0, -30.75, -2);
+  scene.add(moon);
+  const light = new THREE.DirectionalLight(0xffffff, 3.2); light.position.copy(sunDir); scene.add(light);
+  scene.add(new THREE.AmbientLight(0x223355, .15));
+  const earth = await makeEarth();
+  earth.sun.copy(sunDir);
+  earth.scale.setScalar(.85);
+  earth.rotation.z = .41;
+  earth.position.set(8.2, .55, -6);
+  scene.add(earth);
+  overlay(`<div style="position:absolute;left:0;right:0;top:56px;text-align:center">
+      <div class="grad" style="font-size:24px;font-weight:800;letter-spacing:-.3px">Next launch is already on the pad.</div>
+      <div class="mono" style="font-size:13px;color:#94a3b8;margin-top:8px">shipping something new almost every week</div></div>`);
+  return { w: W, h: H, frames: 96, delay: 110, renderAt(t) {
+    stars.update(t, DPR); earth.update(t); r.render(scene, cam);
+  } };
+};
+
+// ---------------------------------------------------------------- PROJECT CARDS
+const CARDS = {
+  worldsmith: { name: 'WorldSmith', accent: '#a78bfa', badge: 'LIVE SaaS', lines: ['One sentence in. A finished film and an', '8-platform campaign out, every frame QC\'d.'],
+    stack: ['Gemini', 'Veo 3.1', 'Vertex AI', 'Next.js'], planet: { type: 0, c1: '#5b3fa8', c2: '#c9b6f2', c3: '#f0d9ff', atmo: '#9d7bff', seed: .3, rings: '#d9c8ff' } },
+  mutiny: { name: 'Mutiny', accent: '#34d399', badge: 'LIVE', lines: ['Runs old and new code on the same inputs', 'and returns the one where they disagree.'],
+    stack: ['Nemotron', 'Nebius Sandboxes', 'Tavily'], planet: { type: 1, c1: '#0f6b7a', c2: '#3f7d3a', c3: '#a59a6a', atmo: '#5eead4', seed: 1.7 } },
+  'window-sticker': { name: 'Window Sticker', accent: '#fbbf24', badge: 'LIVE', lines: ['Crash-test ratings for AI agents: 576 runs', 'in throwaway microVMs, real confidence intervals.'],
+    stack: ['Python', 'Vultr microVMs', 'Evals'], planet: { type: 0, c1: '#9a5b23', c2: '#e8c48f', c3: '#c4552b', atmo: '#fcd34d', seed: 2.1 } },
+  buyable: { name: 'Buyable', accent: '#f472b6', badge: 'LIVE', lines: ['Can a screen reader or an AI agent actually', 'check out? Finds the blocker, patches, proves it.'],
+    stack: ['Bedrock AgentCore', 'TypeScript'], planet: { type: 3, c1: '#7a2a5c', c2: '#f3b6d8', c3: '#ffffff', atmo: '#f472b6', seed: 4.2, rings: '#f9c6e2' } },
+  staycovered: { name: 'StayCovered', accent: '#60a5fa', badge: 'LIVE', lines: ['A Medicaid copilot that answers from the rules', 'as of a date. Ships WorkReqBench, an open benchmark.'],
+    stack: ['Nemotron', 'Tavily', 'TypeScript'], earth: true },
+  rangrez: { name: 'Rangrez', accent: '#fb923c', badge: 'LIVE', lines: ['A self-driving dye lab on Meta models. Matches', 'a colour on cotton from one phone photo.'],
+    stack: ['SAM', 'Muse', 'Hugging Face'], planet: { type: 4, c1: '#1c1310', c2: '#3b2318', c3: '#ff7a1a', atmo: '#fb923c', seed: 3.3 } },
+  dryrun: { name: 'DryRun', accent: '#2dd4bf', badge: 'APP STORE', lines: ['Rehearse the conversation you\'re dreading.', 'Your hedging underlines itself as you type.'],
+    stack: ['Kotlin Multiplatform', 'Cloudflare Workers'], planet: { type: 3, c1: '#0e5a63', c2: '#9be7e0', c3: '#f2fffd', atmo: '#2dd4bf', seed: 5.1 } },
+  platelock: { name: 'PlateLock', accent: '#f87171', badge: 'OPEN SOURCE', lines: ['Add the VFX, keep the shot. Generative VFX', 'that leaves untouched pixels bit-identical.'],
+    stack: ['LTX-2.3', 'ComfyUI', 'Open weights'], planet: { type: 2, c1: '#7a2e1c', c2: '#c86b43', c3: '#e9b48a', atmo: '#fca5a5', seed: 6.4 } },
+};
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+
+for (const [slug, d] of Object.entries(CARDS)) {
+  SCENES['card-' + slug] = async () => {
+    const W = 480, H = 190;
+    stage.style.borderRadius = '16px';
+    const c = setup(W, H);
+    const r = makeRenderer(c, W, H, DPR);
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(30, W / H, .01, 2000);
+    cam.position.set(0, 0, 6); cam.lookAt(0, 0, 0);
+    const neb = makeNebula('#1a0d38', '#06283a', hexA(d.accent, 1).replace(/rgba\((\d+),(\d+),(\d+),1\)/, (m, a, b, cc) =>
+      '#' + [a, b, cc].map(v => (+v >> 2).toString(16).padStart(2, '0')).join('')), .45, 2 + slug.length);
+    const stars = makeStarfield(2500, 500, slug.length * 13 + 5);
+    scene.add(neb, stars);
+    const sunDir = new THREE.Vector3(-.85, .35, .55).normalize();
+    let obj;
+    if (d.earth) { obj = await makeEarth(); obj.sun.copy(new THREE.Vector3(-1, .3, .1).normalize()); obj.rotation.z = .41; }
+    else obj = makePlanet(d.planet, sunDir);
+    const s = d.planet?.rings ? .78 : 1.02;
+    obj.scale.setScalar(s);
+    obj.position.set(d.earth ? 3.4 : d.planet?.rings ? 2.75 : 2.95, .3, 0);
+    scene.add(obj);
+    const chips = d.stack.map(x => `<span class="chip" style="font-size:11.5px;padding:4px 10px;color:${d.accent};
+        border:1px solid ${hexA(d.accent, .45)};background:rgba(6,8,20,.55)">${x}</span>`).join('');
+    overlay(`
+      <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,4,10,.82) 0%,rgba(3,4,10,.55) 52%,rgba(3,4,10,0) 72%)"></div>
+      <div style="position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1.5px ${hexA(d.accent, .55)}"></div>
+      <div style="position:absolute;left:24px;top:20px">
+        <div style="font-size:26px;font-weight:800;color:#f8fafc;letter-spacing:-.5px;text-shadow:0 2px 10px #000">${d.name}</div>
+        <div class="chip mono" style="margin-top:9px;padding:3px 10px 3px 8px;font-size:10.5px;letter-spacing:1.3px;font-weight:800;
+             color:#86efac;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12)"><span class="dot" id="dot"></span>${d.badge}</div>
+        <div style="margin-top:12px;font-size:14px;line-height:1.45;color:#d6deeb;text-shadow:0 1px 6px #000">${d.lines.join('<br>')}</div>
+        <div style="display:flex;gap:7px;margin-top:12px">${chips}</div>
+      </div>`);
+    const dot = document.getElementById('dot');
+    return { w: W, h: H, frames: 72, delay: 100, renderAt(t) {
+      neb.update(t, W / H); stars.update(t, DPR); obj.update(t);
+      dot.style.opacity = .35 + .65 * (.5 + .5 * Math.cos(TAU * t * 4));
+      r.render(scene, cam);
+    } };
+  };
+}
+
+// ---------------------------------------------------------------- TROPHIES
+const WINS = [
+  ['GRAND PRIZE', 'gold', 'DevNetwork [API + Cloud + AI] Hackathon 2026', 'Overall Winner at API World, built solo', '315 submissions'],
+  ['GRAND PRIZE', 'gold', 'Hack Apertus 2026 · Swiss AI', 'Online Track', '919 builders · 80 countries'],
+  ['1ST PLACE', 'gold', 'IBM Bob 2.0 Hackathon · lablab', '$12K prize pool', '15,727 participants'],
+  ['2ND PLACE', 'silver', 'Google Cloud · Build with AI: Code for Communities', 'Track 5 · GDG India × Hack2skill · ₹10L pool', 'nationwide'],
+  ['5TH PLACE', 'bronze', 'Hack Raptors', '', ''],
+  ['SPECIAL 26', 'violet', 'GoKwik Special 26 Award', 'Company-wide quarterly award for top performers', 'at work'],
+];
+const METAL = { gold: ['#f5c04a', '#fde68a'], silver: ['#d9dee6', '#f1f5f9'], bronze: ['#c9773f', '#fed7aa'], violet: ['#9b7bff', '#ddd6fe'] };
+SCENES.trophies = async () => {
+  const W = 1000, rowH = 76, top = 66, H = top + rowH * WINS.length + 18;
+  const c = setup(W, H);
+  const bg = spaceLayer(c, W, H, { a: '#2a1458', b: '#0a3552', c: '#4a2a05', strength: .42, seed: 5 });
+  const rows = WINS.map(([rank, m, title, sub, field], i) => `
+    <div class="glass" style="position:absolute;left:24px;right:24px;top:${top + i * rowH}px;height:${rowH - 12}px;border-radius:14px;
+         border-color:${hexA(METAL[m][0], .35)}">
+      <canvas id="m${i}" style="position:absolute;left:10px;top:${(rowH - 12 - 60) / 2}px;width:60px;height:60px"></canvas>
+      <div style="position:absolute;left:86px;top:11px;display:flex;gap:14px;align-items:baseline">
+        <span style="font-size:11.5px;font-weight:800;letter-spacing:1.8px;color:${METAL[m][1]}">${rank}</span>
+        <span style="font-size:12.5px;color:#94a3b8">${sub}</span></div>
+      <div style="position:absolute;left:86px;top:30px;font-size:18px;font-weight:700;color:#f8fafc">${title}</div>
+      ${field ? `<div class="chip" style="position:absolute;right:18px;top:18px;color:${METAL[m][1]};border:1px solid ${hexA(METAL[m][0], .5)};
+           background:${hexA(METAL[m][0], .12)}">${field}</div>` : ''}
+    </div>`).join('');
+  overlay(`<div class="mono" style="position:absolute;left:40px;top:28px;font-size:14px;color:#67e8f9">
+      MISSION LOG // 5 hackathon wins in 2026, plus 1 at work</div>${rows}`);
+  const medals = WINS.map(([, m], i) => {
+    const cv = document.getElementById('m' + i);
+    const rr = makeRenderer(cv, 60, 60, DPR);
+    rr.toneMappingExposure = 1.15;
+    const sc = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(30, 1, .1, 100); cam.position.set(0, 0, 4.4);
+    const { group, light } = makeMedal(METAL[m][0], rr);
+    sc.add(group, light, new THREE.AmbientLight(0xffffff, .3));
+    return { rr, sc, cam, group, phase: i * .17 };
+  });
+  return { w: W, h: H, frames: 60, delay: 70, renderAt(t) {
+    bg.render(t);
+    for (const md of medals) { md.group.rotation.y = TAU * (t + md.phase); md.group.rotation.x = .18 * Math.sin(TAU * t); md.rr.render(md.sc, md.cam); }
+  } };
+};
+
+// ---------------------------------------------------------------- STATS
+SCENES.stats = async () => {
+  const W = 1000, H = 150;
+  stage.className = 'flat';
+  const c = setup(W, H); c.style.display = 'none';
+  const cards = [['5', 'hackathon wins in 2026', '2 grand prizes', '#fbbf24'], ['50+', 'AI products shipped', 'July to November 2026', '#22d3ee'],
+    ['15.7K', 'builders in the field', 'IBM Bob 2.0, 1st place', '#a78bfa'], ['1', 'live paid AI SaaS', 'plus an App Store app', '#f472b6']];
+  overlay(cards.map(([n, l, s, col], i) => `
+    <div style="position:absolute;left:${i * 255}px;top:8px;width:235px;height:134px;border-radius:16px;overflow:hidden">
+      <canvas id="s${i}" class="bg"></canvas>
+      <div style="position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px ${hexA(col, .4)}"></div>
+      <div style="position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,transparent,${col},transparent)"></div>
+      <div style="position:absolute;left:0;right:0;top:20px;text-align:center">
+        <div class="grad" style="font-size:46px;font-weight:800;letter-spacing:-1px;line-height:1">${n}</div>
+        <div style="font-size:15px;font-weight:600;color:#f1f5f9;margin-top:10px">${l}</div>
+        <div style="font-size:12.5px;color:#94a3b8;margin-top:4px">${s}</div></div></div>`).join(''));
+  const layers = cards.map(([, , , col], i) => spaceLayer(document.getElementById('s' + i), 235, 134,
+    { a: '#1c0f40', b: '#06283a', c: col, strength: .3, seed: 10 + i, stars: 1200 }));
+  return { w: W, h: H, frames: 1, delay: 0, renderAt(t) { layers.forEach(l => l.render(.13)); } };
+};
+
+// ---------------------------------------------------------------- ARSENAL
+const ARS = [['MODELS', '#a78bfa', ['Gemini', 'Veo 3.1', 'Claude', 'NVIDIA Nemotron', 'IBM Granite', 'Apertus', 'Meta SAM', 'LTX-2.3', 'Gemini TTS']],
+  ['AGENTS & PROTOCOLS', '#22d3ee', ['Multi-agent orchestration', 'MCP', 'Google ADK', 'Strands Agents', 'Bedrock AgentCore', 'Human-in-the-loop gates']],
+  ['RETRIEVAL & EVALS', '#34d399', ['RAG', 'GraphRAG', 'TigerGraph', 'FalkorDB', 'LLM evals', 'Benchmarks with CIs', 'Guardrails']],
+  ['CLOUD & INFRA', '#f472b6', ['Vertex AI', 'Cloud Run', 'Firebase', 'Amazon Bedrock', 'Nebius', 'Hugging Face', 'Docker', 'GitHub Actions']]];
+SCENES.arsenal = async () => {
+  const W = 1000, H = 352;
+  const c = setup(W, H);
+  const bg = spaceLayer(c, W, H, { a: '#2a1458', b: '#0a3552', c: '#3d0d2c', strength: .5, seed: 14 });
+  overlay(`<div style="position:absolute;left:40px;top:24px;right:40px">
+    <div class="mono" style="font-size:14px;color:#94a3b8"><span style="color:#34d399">$</span> cat ~/arsenal.yml</div>
+    ${ARS.map(([t, col, items]) => `<div class="mono" style="margin-top:20px;font-size:12.5px;font-weight:700;letter-spacing:1.6px;color:${col}">${t}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:9px">${items.map(x => `<span class="chip" style="color:${col};
+        border:1px solid ${hexA(col, .45)};background:rgba(6,8,22,.6)">${x}</span>`).join('')}</div>`).join('')}</div>`);
+  return { w: W, h: H, frames: 1, delay: 0, renderAt() { bg.render(.4); } };
+};
+
+// ---------------------------------------------------------------- SECTION HEADERS (transparent)
+const HEADS = { wins: ['Hackathon Wins', '01 // MISSION LOG'], live: ['Live in Production', '02 // DEPLOYED, NOT DEMOED'],
+  arsenal: ['The AI Arsenal', '03 // TOOLS OF THE TRADE'], flight: ['Flight Path', '04 // CONTRIBUTIONS IN 3D'] };
+for (const [k, [label, kicker]] of Object.entries(HEADS)) {
+  SCENES['h-' + k] = async () => {
+    const W = 1000, H = 74;
+    stage.className = 'flat';
+    stage.style.width = W + 'px'; stage.style.height = H + 'px';
+    overlay(`<div class="mono" style="position:absolute;left:0;top:4px;font-size:13px;letter-spacing:2.4px;color:#0891b2">${kicker}</div>
+      <div style="position:absolute;left:0;right:0;top:24px;display:flex;align-items:center;gap:22px">
+        <span class="grad2" style="font-size:34px;font-weight:800;letter-spacing:-.6px;white-space:nowrap">${label}</span>
+        <span style="flex:1;height:2px;background:linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6,transparent);opacity:.7"></span></div>`);
+    return { w: W, h: H, frames: 1, delay: 0, renderAt() {} };
+  };
+}
+
+const s = await SCENES[name]();
+window.SCENE = { w: s.w, h: s.h, frames: s.frames, delay: s.delay };
+window.renderAt = (t) => s.renderAt(t);
+await document.fonts.ready;
+s.renderAt(0);
+window.SCENE_READY = true;
+</script>
+</body>
+</html>
